@@ -1,0 +1,8 @@
+openai-whisper==20231117
+torch
+torchaudio
+ffmpeg-python
+numpy
+Pillow
+pyinstaller
+tiktoken
