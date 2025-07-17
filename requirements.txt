@@ -1,8 +1,15 @@
+# Voice Extractor - Dependencias principales
 openai-whisper==20231117
-torch
-torchaudio
-ffmpeg-python
-numpy
-Pillow
-pyinstaller
-tiktoken
+torch>=2.0.0
+torchaudio>=2.0.0
+ffmpeg-python>=0.2.0
+numpy>=1.21.0
+Pillow>=9.0.0
+tiktoken>=0.4.0
+
+# Herramientas de compilacion
+pyinstaller>=5.0.0
+
+# Dependencias adicionales para compatibilidad
+setuptools>=65.0.0
+wheel>=0.37.0
