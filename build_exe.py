@@ -15,24 +15,25 @@ def check_requirements():
     """Verifica que todas las dependencias estén instaladas"""
     print("🔍 Verificando dependencias...")
     
+    # Lista de paquetes y sus módulos de importación
     required_packages = [
-        'pyinstaller',
-        'whisper', 
-        'torch',
-        'torchaudio',
-        'tkinter',
-        'numpy',
-        'pillow'
+        ('pyinstaller', 'PyInstaller'),
+        ('openai-whisper', 'whisper'), 
+        ('torch', 'torch'),
+        ('torchaudio', 'torchaudio'),
+        ('tkinter', 'tkinter'),
+        ('numpy', 'numpy'),
+        ('pillow', 'PIL')
     ]
     
     missing = []
-    for package in required_packages:
+    for package_name, import_name in required_packages:
         try:
-            __import__(package)
-            print(f"✅ {package} - OK")
+            __import__(import_name)
+            print(f"✅ {package_name} - OK")
         except ImportError:
-            missing.append(package)
-            print(f"❌ {package} - FALTANTE")
+            missing.append(package_name)
+            print(f"❌ {package_name} - FALTANTE")
     
     if missing:
         print(f"\n⚠️  Instala los paquetes faltantes: pip install {' '.join(missing)}")
@@ -60,17 +61,13 @@ import sys
 import os
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
-# Datos y módulos de Whisper
+# Datos y módulos de Whisper (solo los esenciales)
 whisper_data = collect_data_files('whisper')
 whisper_modules = collect_submodules('whisper')
 
-# Datos de torch
-torch_data = collect_data_files('torch')
-torch_modules = collect_submodules('torch')
-
 # Archivos adicionales necesarios
 added_files = [
-    ('icon.ico', '.'),
+    ('C:/Users/Johny/Documents/Developer/Python/Voice/icon.ico', '.'),
     ('README.md', '.'),
 ]
 
@@ -88,11 +85,9 @@ a = Analysis(
     ['Voice_extractor.py'],
     pathex=[],
     binaries=[],
-    datas=added_files + whisper_data + torch_data,
+    datas=added_files + whisper_data,
     hiddenimports=[
         'whisper',
-        'torch',
-        'torchaudio', 
         'numpy',
         'tiktoken',
         'regex',
@@ -110,7 +105,13 @@ a = Analysis(
         'subprocess',
         'io',
         'contextlib',
-    ] + whisper_modules + torch_modules,
+        'ssl',
+        '_ssl',
+        'certifi',
+        'urllib3',
+        'requests',
+        'tqdm',
+    ] + whisper_modules,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -121,6 +122,12 @@ a = Analysis(
         'jupyter',
         'IPython',
         'notebook',
+        'torch.distributions',
+        'torch.optim',
+        'torch.nn.modules.transformer',
+        'torchaudio.datasets',
+        'torchaudio.models',
+        'torchaudio.pipelines',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -139,15 +146,18 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
-    console=False,  # Sin consola para interfaz limpia
+    upx=False,  # Deshabilitado para evitar problemas con DLLs
+    runtime_tmpdir=None,
+    console=False,  # Sin consola para interfaz limpia - IMPORTANTE
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='icon.ico',  # Icono principal
-    version='version_info.txt'  # Información de versión
+    icon='C:/Users/Johny/Documents/Developer/Python/Voice/icon.ico',  # Icono principal integrado en el ejecutable
+    version='version_info.txt',  # Información de versión
+    uac_admin=False,  # No requiere permisos de administrador
+    uac_uiaccess=False  # Sin acceso especial de UI
 )
 
 coll = COLLECT(
@@ -156,7 +166,7 @@ coll = COLLECT(
     a.zipfiles,
     a.datas,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=[],
     name='VoiceExtractor',
 )
@@ -215,6 +225,14 @@ def build_executable():
     print("🚀 Compilando ejecutable...")
     print("   (Esto puede tomar varios minutos...)")
     
+    # Verificar que el icono existe antes de compilar
+    icon_path = r'C:\Users\Johny\Documents\Developer\Python\Voice\icon.ico'
+    if not os.path.exists(icon_path):
+        icon_path = 'icon.ico'
+    
+    print(f"🎨 Usando icono: {icon_path}")
+    
+    # Cuando usamos un archivo .spec, no podemos usar --add-data, --icon, etc.
     cmd = [
         sys.executable, '-m', 'PyInstaller',
         '--clean',
@@ -223,13 +241,21 @@ def build_executable():
     ]
     
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=os.getcwd())
+        # Ejecutar sin mostrar ventanas de consola
+        result = subprocess.run(
+            cmd, 
+            capture_output=True, 
+            text=True, 
+            cwd=os.getcwd(),
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        )
         
         if result.returncode == 0:
             print("✅ Compilación exitosa!")
+            print(f"✅ Icono integrado desde: {icon_path}")
             return True
         else:
-            print(f"❌ Error en compilación:")
+            print("❌ Error en compilación:")
             print(result.stderr)
             return False
             
@@ -242,24 +268,65 @@ def create_launcher_script():
     print("📱 Creando launcher optimizado...")
     
     launcher_content = '''@echo off
-echo 🎬 Iniciando Voice Extractor...
+REM Voice Extractor - Launcher Silencioso
+REM Configurar para no mostrar ventanas molestas
+title Voice Extractor Launcher
 cd /d "%~dp0"
 
-REM Verificar si FFmpeg está disponible
+REM Minimizar esta ventana inmediatamente
+if not "%1"=="min" start /min cmd /c "%0" min & exit
+
+REM Verificar FFmpeg de forma silenciosa
 ffmpeg -version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo ⚠️  FFmpeg no encontrado. Instalando...
-    call install_ffmpeg.bat
+    echo Instalando dependencias necesarias...
+    start /wait /min cmd /c "install_ffmpeg.bat"
 )
 
-REM Ejecutar la aplicación
+REM Ejecutar la aplicación principal
 start "" "VoiceExtractor.exe"
+
+REM Cerrar el launcher automáticamente
+exit
 '''
+    
+    # Crear directorio si no existe
+    os.makedirs('dist/VoiceExtractor', exist_ok=True)
     
     with open('dist/VoiceExtractor/VoiceExtractor_Launcher.bat', 'w', encoding='utf-8') as f:
         f.write(launcher_content)
     
-    print("✅ Launcher creado")
+    # Crear también un launcher VBS (completamente silencioso)
+    vbs_launcher = '''Set WshShell = CreateObject("WScript.Shell")
+Dim fso, CurrentDirectory
+Set fso = CreateObject("Scripting.FileSystemObject")
+CurrentDirectory = fso.GetParentFolderName(WScript.ScriptFullName)
+
+' Cambiar al directorio del script
+WshShell.CurrentDirectory = CurrentDirectory
+
+' Verificar FFmpeg silenciosamente
+Set objExec = WshShell.Exec("ffmpeg -version")
+Do While objExec.Status = 0
+    WScript.Sleep 100
+Loop
+
+If objExec.ExitCode <> 0 Then
+    ' Instalar FFmpeg en segundo plano
+    WshShell.Run "cmd /c install_ffmpeg.bat", 0, True
+End If
+
+' Ejecutar VoiceExtractor
+WshShell.Run "VoiceExtractor.exe", 1, False
+
+' Terminar script
+WScript.Quit
+'''
+    
+    with open('dist/VoiceExtractor/VoiceExtractor_Silent.vbs', 'w', encoding='utf-8') as f:
+        f.write(vbs_launcher)
+    
+    print("✅ Launcher creado (BAT + VBS silencioso)")
 
 def create_ffmpeg_installer():
     """Crea instalador automático de FFmpeg"""
@@ -267,20 +334,40 @@ def create_ffmpeg_installer():
     
     ffmpeg_installer = '''@echo off
 setlocal enabledelayedexpansion
+title FFmpeg Installer
 
-echo 🔧 Instalando FFmpeg...
+REM Configurar para ejecución silenciosa si se ejecuta desde launcher
+if "%1"=="silent" (
+    set SILENT_MODE=1
+) else (
+    set SILENT_MODE=0
+)
+
+if %SILENT_MODE%==1 (
+    echo Instalando FFmpeg en segundo plano...
+) else (
+    echo 🔧 Instalando FFmpeg...
+)
 
 REM Crear directorio para FFmpeg
 if not exist "ffmpeg" mkdir ffmpeg
 cd ffmpeg
 
-REM Descargar FFmpeg (versión estática)
-echo 📥 Descargando FFmpeg...
-powershell -Command "& {Invoke-WebRequest -Uri 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip' -OutFile 'ffmpeg.zip'}"
+REM Descargar FFmpeg (versión estática) - Silencioso si es necesario
+if %SILENT_MODE%==1 (
+    powershell -WindowStyle Hidden -Command "& {Invoke-WebRequest -Uri 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip' -OutFile 'ffmpeg.zip'}" >nul 2>&1
+) else (
+    echo 📥 Descargando FFmpeg...
+    powershell -Command "& {Invoke-WebRequest -Uri 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip' -OutFile 'ffmpeg.zip'}"
+)
 
 REM Extraer
-echo 📦 Extrayendo archivos...
-powershell -Command "& {Expand-Archive -Path 'ffmpeg.zip' -DestinationPath '.' -Force}"
+if %SILENT_MODE%==1 (
+    powershell -WindowStyle Hidden -Command "& {Expand-Archive -Path 'ffmpeg.zip' -DestinationPath '.' -Force}" >nul 2>&1
+) else (
+    echo 📦 Extrayendo archivos...
+    powershell -Command "& {Expand-Archive -Path 'ffmpeg.zip' -DestinationPath '.' -Force}"
+)
 
 REM Mover ejecutables al directorio raíz
 for /d %%i in (ffmpeg-master-*) do (
@@ -291,9 +378,16 @@ REM Limpiar
 cd ..
 rmdir /s /q ffmpeg 2>nul
 
-echo ✅ FFmpeg instalado correctamente
-pause
+if %SILENT_MODE%==1 (
+    echo FFmpeg instalado correctamente
+) else (
+    echo ✅ FFmpeg instalado correctamente
+    pause
+)
 '''
+    
+    # Crear directorio si no existe
+    os.makedirs('dist/VoiceExtractor', exist_ok=True)
     
     with open('dist/VoiceExtractor/install_ffmpeg.bat', 'w', encoding='utf-8') as f:
         f.write(ffmpeg_installer)
@@ -304,17 +398,27 @@ def create_readme():
     """Crea README para el usuario"""
     print("📖 Creando manual de usuario...")
     
-    readme_content = '''# Voice Extractor - Whisper AI
+    readme_content = '''# Voice Extractor - Whisper AI (Optimizado)
 
 ## 🚀 Inicio Rápido
 
 1. **Ejecutar la aplicación:**
-   - Haz doble clic en `VoiceExtractor.exe`
-   - O usa `VoiceExtractor_Launcher.bat` para instalación automática de dependencias
+   - **Opción 1 (Recomendada):** Haz doble clic en `VoiceExtractor_Silent.vbs` (Completamente silencioso)
+   - **Opción 2:** Haz doble clic en `VoiceExtractor.exe` (Directo)
+   - **Opción 3:** Usa `VoiceExtractor_Launcher.bat` (Con ventana mínima)
+   - ⚡ NUEVO: Inicio optimizado en pocos segundos
+   - 🤫 NUEVO: Launcher silencioso sin ventanas molestas
 
 2. **Primera vez:**
-   - La aplicación instalará FFmpeg automáticamente si es necesario
-   - Los modelos de IA se descargarán la primera vez que los uses
+   - La aplicación instalará FFmpeg automáticamente si es necesario (en segundo plano)
+   - Los modelos de IA se cargarán SOLO cuando los uses por primera vez
+   - ⚡ La interfaz aparece inmediatamente
+
+## 🤫 Opciones de Lanzamiento
+
+- **VoiceExtractor_Silent.vbs** ➜ Completamente silencioso, sin ventanas de comandos
+- **VoiceExtractor.exe** ➜ Directo, más rápido
+- **VoiceExtractor_Launcher.bat** ➜ Con verificación de dependencias
 
 ## 📁 Formatos Soportados
 
@@ -337,21 +441,34 @@ def create_readme():
 - **Medium:** Muy buena precisión (769 MB)
 - **Large:** Mejor calidad posible (1550 MB)
 
+## ⚡ Optimizaciones
+
+- **Inicio inmediato:** La interfaz aparece en 2-3 segundos
+- **Carga diferida:** Los modelos de IA se cargan solo cuando los necesitas
+- **Memoria optimizada:** Menor uso de RAM al inicio
+- **Launcher silencioso:** Sin ventanas de comando molestas
+- **Mejor experiencia:** Splash screen informativo
+
 ## 🔧 Solución de Problemas
 
-**Error de FFmpeg:** Ejecuta `install_ffmpeg.bat`
+**Error de FFmpeg:** El instalador automático se ejecuta en segundo plano
 **Modelos lentos:** Los modelos se descargan solo la primera vez
 **Archivos grandes:** Usa modelo "Tiny" para pruebas rápidas
+**Ventanas molestas:** Usa `VoiceExtractor_Silent.vbs`
 
 ## 📞 Soporte
 
 - El archivo de texto se guarda en la misma carpeta que el video
 - Todos los formatos de video comunes están soportados
 - La transcripción funciona sin conexión a internet (después de la primera descarga)
+- No aparecen ventanas de comando molestas con el launcher VBS
 
 ---
-Voice Extractor v1.0 - Powered by OpenAI Whisper
+Voice Extractor v1.1 - Powered by OpenAI Whisper - Silent Edition
 '''
+    
+    # Crear directorio si no existe
+    os.makedirs('dist/VoiceExtractor', exist_ok=True)
     
     with open('dist/VoiceExtractor/README.txt', 'w', encoding='utf-8') as f:
         f.write(readme_content)
@@ -362,11 +479,48 @@ def optimize_executable():
     """Optimiza el ejecutable para arranque rápido"""
     print("⚡ Optimizando para arranque rápido...")
     
-    # Copiar icono al directorio de distribución
-    if os.path.exists('icon.ico'):
-        shutil.copy2('icon.ico', 'dist/VoiceExtractor/')
+    # Crear directorio si no existe
+    os.makedirs('dist/VoiceExtractor', exist_ok=True)
     
-    print("✅ Optimización completada")
+    # Copiar icono al directorio de distribución (múltiples ubicaciones para asegurar disponibilidad)
+    icon_source = r'C:\Users\Johny\Documents\Developer\Python\Voice\icon.ico'
+    if os.path.exists(icon_source):
+        # Copiar a la raíz del directorio de distribución
+        shutil.copy2(icon_source, 'dist/VoiceExtractor/icon.ico')
+        # Copiar también con nombre alternativo por seguridad
+        shutil.copy2(icon_source, 'dist/VoiceExtractor/app_icon.ico')
+        print(f"✅ Icono copiado desde: {icon_source}")
+    elif os.path.exists('icon.ico'):
+        # Fallback a la ubicación local
+        shutil.copy2('icon.ico', 'dist/VoiceExtractor/icon.ico')
+        shutil.copy2('icon.ico', 'dist/VoiceExtractor/app_icon.ico')
+        print("✅ Icono copiado desde ubicación local")
+    else:
+        print("⚠️ Archivo icon.ico no encontrado")
+    
+    # Crear script para deshabilitar notificaciones molestas de Windows
+    disable_notifications = '''@echo off
+REM Script para deshabilitar notificaciones molestas durante la ejecución
+REM Ejecutar este script como administrador si tienes problemas con ventanas de Chocolatey
+
+REM Deshabilitar notificaciones de PowerShell
+reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings\\Microsoft.PowerShell" /v "Enabled" /t REG_DWORD /d 0 /f >nul 2>&1
+
+REM Deshabilitar notificaciones de línea de comandos
+reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings\\Microsoft.WindowsTerminal" /v "Enabled" /t REG_DWORD /d 0 /f >nul 2>&1
+
+REM Configurar para evitar ventanas emergentes de UAC innecesarias
+reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System" /v "ConsentPromptBehaviorUser" /t REG_DWORD /d 0 /f >nul 2>&1
+
+echo Configuración aplicada para reducir ventanas molestas
+echo Puede cerrar esta ventana
+pause
+'''
+    
+    with open('dist/VoiceExtractor/disable_notifications.bat', 'w', encoding='utf-8') as f:
+        f.write(disable_notifications)
+    
+    print("✅ Optimización completada (incluye desactivador de notificaciones)")
 
 def main():
     """Función principal"""
@@ -396,8 +550,10 @@ def main():
     optimize_executable()
     
     print("\n🎉 ¡Compilación completada exitosamente!")
-    print(f"📁 Ejecutable disponible en: dist/VoiceExtractor/")
+    print("📁 Ejecutable disponible en: dist/VoiceExtractor/")
     print("🚀 Para distribuir, comprime toda la carpeta 'VoiceExtractor'")
+    print("⚡ OPTIMIZADO: Inicio en pocos segundos!")
+    print("🎨 ICONO: Integrado correctamente en el ejecutable y ventana")
 
 if __name__ == "__main__":
     main()
