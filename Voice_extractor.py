@@ -94,10 +94,8 @@ class VoiceExtractor:
     
     def set_application_icon(self):
         """Configura el icono de la aplicación de manera robusta"""
-        # Rutas específicas del icono con prioridad
+        # Rutas del icono con prioridad (sin rutas absolutas específicas de PC)
         icon_paths = [
-            # Ruta absoluta especificada por el usuario
-            r"C:\Users\Johny\Documents\Developer\Python\Voice\icon.ico",
             # Desarrollo local
             "icon.ico",
             # PyInstaller bundle
@@ -127,7 +125,7 @@ class VoiceExtractor:
         
         # Configurar también el icono de la ventana para asegurar que aparezca en la barra de tareas
         try:
-            self.root.wm_iconbitmap(icon_paths[0] if os.path.exists(icon_paths[0]) else "icon.ico")
+            self.root.wm_iconbitmap(icon_paths[0] if icon_paths[0] and os.path.exists(icon_paths[0]) else "icon.ico")
         except:
             pass
 

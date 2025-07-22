@@ -10,7 +10,7 @@ whisper_modules = collect_submodules('whisper')
 
 # Archivos adicionales necesarios
 added_files = [
-    ('C:/Users/Johny/Documents/Developer/Python/Voice/icon.ico', '.'),
+    ('icon.ico', '.'),
     ('README.md', '.'),
 ]
 
@@ -97,7 +97,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='C:/Users/Johny/Documents/Developer/Python/Voice/icon.ico',  # Icono principal integrado en el ejecutable
+    icon='icon.ico',  # Icono principal integrado en el ejecutable
     version='version_info.txt',  # Información de versión
     uac_admin=False,  # No requiere permisos de administrador
     uac_uiaccess=False  # Sin acceso especial de UI

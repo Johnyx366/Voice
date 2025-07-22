@@ -67,7 +67,7 @@ whisper_modules = collect_submodules('whisper')
 
 # Archivos adicionales necesarios
 added_files = [
-    ('C:/Users/Johny/Documents/Developer/Python/Voice/icon.ico', '.'),
+    ('icon.ico', '.'),
     ('README.md', '.'),
 ]
 
@@ -154,7 +154,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='C:/Users/Johny/Documents/Developer/Python/Voice/icon.ico',  # Icono principal integrado en el ejecutable
+    icon='icon.ico',  # Icono principal integrado en el ejecutable
     version='version_info.txt',  # Información de versión
     uac_admin=False,  # No requiere permisos de administrador
     uac_uiaccess=False  # Sin acceso especial de UI
@@ -226,9 +226,9 @@ def build_executable():
     print("   (Esto puede tomar varios minutos...)")
     
     # Verificar que el icono existe antes de compilar
-    icon_path = r'C:\Users\Johny\Documents\Developer\Python\Voice\icon.ico'
+    icon_path = 'icon.ico'
     if not os.path.exists(icon_path):
-        icon_path = 'icon.ico'
+        print("⚠️ Archivo icon.ico no encontrado en el directorio actual")
     
     print(f"🎨 Usando icono: {icon_path}")
     
@@ -483,18 +483,13 @@ def optimize_executable():
     os.makedirs('dist/VoiceExtractor', exist_ok=True)
     
     # Copiar icono al directorio de distribución (múltiples ubicaciones para asegurar disponibilidad)
-    icon_source = r'C:\Users\Johny\Documents\Developer\Python\Voice\icon.ico'
+    icon_source = 'icon.ico'
     if os.path.exists(icon_source):
         # Copiar a la raíz del directorio de distribución
         shutil.copy2(icon_source, 'dist/VoiceExtractor/icon.ico')
         # Copiar también con nombre alternativo por seguridad
         shutil.copy2(icon_source, 'dist/VoiceExtractor/app_icon.ico')
         print(f"✅ Icono copiado desde: {icon_source}")
-    elif os.path.exists('icon.ico'):
-        # Fallback a la ubicación local
-        shutil.copy2('icon.ico', 'dist/VoiceExtractor/icon.ico')
-        shutil.copy2('icon.ico', 'dist/VoiceExtractor/app_icon.ico')
-        print("✅ Icono copiado desde ubicación local")
     else:
         print("⚠️ Archivo icon.ico no encontrado")
     
